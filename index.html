@@ -312,8 +312,16 @@
             user-select: none;
             flex: 0 0 auto;
             color: #334155;
+            transition: all 0.1s ease;
         }
         .pad-btn:hover { background: #e0f2fe; border-color: var(--primary-light); color: var(--primary-light); }
+        
+        /* Screenshot-matching highlight style for selected numbers */
+        .pad-btn.active-pad {
+            background: #eff6ff !important;
+            border-color: #3b82f6 !important;
+            color: #2563eb !important;
+        }
 
         .action-row {
             display: flex;
@@ -472,7 +480,8 @@
         </div>
 
         <div class="input-group">
-            <input type="text" id="entryInput" placeholder="Select number below or type calculation here (Ex: 01-1000)..." autofocus autocomplete="off">
+            <!-- Added inputmode="decimal" to invoke the math/decimal keyboard style instantly -->
+            <input type="text" id="entryInput" inputmode="decimal" placeholder="Select number below or type calculation here (Ex: 01-1000)..." autofocus autocomplete="off">
             <button class="btn btn-success" style="flex: initial; padding: 12px 20px;" onclick="generateSnapshot()">📸 Save Ledger as Picture</button>
         </div>
 
@@ -554,10 +563,22 @@
         const counterDisplay = document.getElementById('liveAmountCounter');
         let val = inputField.value.trim();
 
+        // Clear active styles if input is emptied manually
         if (!val) {
             counterDisplay.innerText = "0.00";
+            document.querySelectorAll('.pad-btn').forEach(b => b.classList.remove('active-pad'));
             return;
         }
+
+        // Dynamically match and highlight selectors based on current input text context
+        document.querySelectorAll('.pad-btn').forEach(btn => {
+            let prefixKey = btn.innerText;
+            if (val === prefixKey + '-' || val.includes(', ' + prefixKey + '-') || val.startsWith(prefixKey + '-')) {
+                btn.classList.add('active-pad');
+            } else {
+                btn.classList.remove('active-pad');
+            }
+        });
 
         // Handle multi-line or comma separated batch entries by using the last active block segment
         let parts = val.split(',');
@@ -661,6 +682,7 @@
         
         inputField.value = "";
         document.getElementById('liveAmountCounter').innerText = "0.00";
+        document.querySelectorAll('.pad-btn').forEach(b => b.classList.remove('active-pad'));
         inputField.focus();
     }
 
@@ -686,7 +708,7 @@
         renderHistory();
     }
 
-    function handlePadClick(numString) {
+    function handlePadClick(numString, clickedBtn) {
         const inputField = document.getElementById('entryInput');
         let currentVal = inputField.value.trim();
         
@@ -695,6 +717,10 @@
         } else {
             inputField.value = currentVal + ", " + numString + "-";
         }
+        
+        // Apply immediate visual selection styling
+        if(clickedBtn) clickedBtn.classList.add('active-pad');
+        
         inputField.focus();
         updateLiveAmountCounter();
     }
@@ -708,11 +734,12 @@
             let btn = document.createElement('div');
             btn.className = 'pad-btn';
             btn.innerText = label;
-            btn.onclick = function() { handlePadClick(label); };
+            btn.onclick = function() { handlePadClick(label, btn); };
             padContainer.appendChild(btn);
         }
     }
 
+    // Fixed loop conditions to split column entries perfectly into equal distribution buckets
     function renderGrid() {
         const columns = [
             document.getElementById('tbody-col-1'),
@@ -812,6 +839,7 @@
             renderGrid();
             renderHistory();
             document.getElementById('liveAmountCounter').innerText = "0.00";
+            document.querySelectorAll('.pad-btn').forEach(b => b.classList.remove('active-pad'));
         }
     }
 
