@@ -29,7 +29,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding-bottom: 260px; /* Space so the sticky bottom panel doesn't block the tables */
+            padding-bottom: 380px; /* Space to accommodate history log safely */
         }
 
         /* -------------------------------------------------------------
@@ -82,7 +82,7 @@
             letter-spacing: 0.5px;
         }
 
-        /* Responsive grid framework: 2-columns split layout on mobile, 4-columns on widescreen view modes */
+        /* Responsive split grid system layout */
         .spreadsheet-container {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -143,7 +143,6 @@
             padding-right: 12px !important;
         }
 
-        /* Highlight entry row when active data exists */
         .row-has-value {
             background-color: #f0fdf4 !important; 
         }
@@ -157,7 +156,7 @@
         }
 
         /* -------------------------------------------------------------
-           STICKY BOTTOM INPUT CONTROL PANEL
+           STICKY BOTTOM INPUT CONTROL PANEL WITH COMPACT HISTORY
         ------------------------------------------------------------- */
         .control-panel {
             position: fixed;
@@ -165,7 +164,7 @@
             left: 0;
             right: 0;
             background: var(--surface);
-            padding: 12px 15px 20px 15px;
+            padding: 12px 15px 15px 15px;
             box-shadow: 0 -5px 20px rgba(0,0,0,0.12);
             border-top: 3px solid var(--primary);
             z-index: 9999;
@@ -176,7 +175,6 @@
             transition: background-color 0.2s ease, border-top-color 0.2s ease;
         }
 
-        /* Color shift when correction mode is active */
         .control-panel.correction-active {
             background-color: var(--warning-light);
             border-top-color: var(--warning);
@@ -187,7 +185,6 @@
             max-width: 1060px;
         }
 
-        /* Correction Mode Toggle Bar styling */
         .toggle-row {
             display: flex;
             justify-content: space-between;
@@ -212,7 +209,6 @@
             gap: 6px;
         }
 
-        /* Switch styling handles */
         .switch {
             position: relative;
             display: inline-block;
@@ -248,17 +244,6 @@
             box-sizing: border-box;
             background: #ffffff;
         }
-        .control-panel.correction-active input[type="text"] {
-            border-color: #fdba74;
-        }
-
-        input[type="text"]:focus {
-            outline: none;
-            border-color: var(--primary-light);
-        }
-        .control-panel.correction-active input[type="text"]:focus {
-            border-color: var(--warning);
-        }
 
         .quick-pad-title {
             font-size: 0.8rem;
@@ -278,7 +263,6 @@
             white-space: nowrap;
             -webkit-overflow-scrolling: touch;
         }
-
         .quick-pad::-webkit-scrollbar { height: 5px; }
         .quick-pad::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 
@@ -296,12 +280,12 @@
             color: #334155;
         }
         .pad-btn:hover { background: #e0f2fe; border-color: var(--primary-light); color: var(--primary-light); }
-        .control-panel.correction-active .pad-btn:hover { background: #ffedd5; border-color: var(--warning); color: var(--warning); }
 
         .action-row {
             display: flex;
             gap: 10px;
             width: 100%;
+            margin-bottom: 10px;
         }
 
         .btn {
@@ -318,6 +302,77 @@
             color: var(--danger); font-size: 0.85rem; font-weight: bold;
             margin-bottom: 4px; min-height: 15px;
         }
+
+        /* -------------------------------------------------------------
+           AUDIT TRAIL LOG RUNNING HISTORY STYLES
+        ------------------------------------------------------------- */
+        .history-section {
+            border-top: 1px dashed var(--border);
+            padding-top: 8px;
+            width: 100%;
+        }
+
+        .history-header {
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: #64748b;
+            text-transform: uppercase;
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+
+        .history-list {
+            max-height: 95px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding-right: 2px;
+        }
+
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.825rem;
+        }
+
+        .history-meta {
+            color: #94a3b8;
+            font-variant-numeric: tabular-nums;
+            font-size: 0.75rem;
+        }
+
+        .history-badge {
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.7rem;
+            font-weight: bold;
+        }
+        .badge-add { background: #dcfce7; color: #15803d; }
+        .badge-fix { background: #ffedd5; color: #c2410c; }
+
+        .history-text {
+            font-weight: 600;
+            flex-grow: 1;
+            margin-left: 10px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .history-delete-btn {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            font-size: 0.85rem;
+            padding: 0 4px;
+        }
+        .history-delete-btn:hover { color: var(--danger); }
     </style>
 </head>
 <body>
@@ -350,14 +405,14 @@
                 <thead>
                     <tr><th colspan="2">Summary Column 3</th></tr>
                 </thead>
-                <tbody id="tbody-col-3"></tbody>
+                <tbody id="tbody-col-4"></tbody>
             </table>
 
             <table class="excel-table">
                 <thead>
                     <tr><th colspan="2">Summary Column 4</th></tr>
                 </thead>
-                <tbody id="tbody-col-4"></tbody>
+                <tbody id="tbody-col-3"></tbody>
             </table>
 
         </div>
@@ -378,7 +433,7 @@
         </div>
 
         <div class="input-group">
-            <input type="text" id="entryInput" placeholder="Select number below or type calculation here (Ex: 01-1000)..." autofocus>
+            <input type="text" id="entryInput" placeholder="Select number below or type here..." autofocus autocomplete="off">
             <button class="btn btn-primary" id="logBtn" onclick="processInput()">Log</button>
         </div>
 
@@ -389,17 +444,31 @@
             <button class="btn btn-success" onclick="generateSnapshot()">📸 Save Ledger as Picture</button>
             <button class="btn btn-danger" onclick="clearAll()">Reset</button>
         </div>
+
+        <div class="history-section">
+            <div class="history-header">
+                <span>🪵 Entry Audit Logs History</span>
+                <span id="historyCount">0 records</span>
+            </div>
+            <div class="history-list" id="historyLogList"></div>
+        </div>
         
     </div>
 </div>
 
 <script>
     let ledgerData = {};
+    let entryHistory = [];
     
+    // Core database initializing routines
     if (localStorage.getItem('ledgerData')) {
         ledgerData = JSON.parse(localStorage.getItem('ledgerData'));
     } else {
         resetDataStructure();
+    }
+
+    if (localStorage.getItem('entryHistory')) {
+        entryHistory = JSON.parse(localStorage.getItem('entryHistory'));
     }
 
     function resetDataStructure() {
@@ -409,6 +478,58 @@
             ledgerData[key] = 0;
         }
     }
+
+    // Dynamic Live Field Masking Formatting Logic
+    const inputField = document.getElementById('entryInput');
+    inputField.addEventListener('input', function(e) {
+        let cursorPosition = this.selectionStart;
+        let originalValue = this.value;
+        
+        // Split input into segments if user types multi-entries with commas
+        let segments = originalValue.split(',');
+        
+        let formattedSegments = segments.map((segment, index) => {
+            // Trim leading spaces from subsequent sub-segments
+            let trimmed = segment;
+            let initialSpaces = "";
+            if (index > 0) {
+                let matches = segment.match(/^(\s*)/);
+                initialSpaces = matches ? matches[1] : "";
+                trimmed = segment.trimStart();
+            }
+
+            // Step 1: Handle formatting for single-digit or double-digit prefix additions
+            if (/^\d{2}$/.test(trimmed)) {
+                return initialSpaces + trimmed + "-";
+            }
+            if (/^\d{1}$/.test(trimmed) && index === segments.length - 1 && e.inputType !== 'deleteContentBackward') {
+                // If it's a single digit and we are typing, wait for next digit or auto-add later on blur
+            }
+
+            // Step 2: Handle comma injector separators for values after a hyphen
+            if (trimmed.includes('-')) {
+                let parts = trimmed.split('-');
+                let prefix = parts[0];
+                let mathVal = parts.slice(1).join('-'); // Re-join if multiple hyphens exist
+                
+                // Clean numeric values only from comma positions to recalculate masks
+                let cleanMath = mathVal.replace(/,/g, '');
+                
+                // Format numeric groups with commas
+                let formattedMath = cleanMath.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                
+                return initialSpaces + prefix + "-" + formattedMath;
+            }
+            
+            return initialSpaces + trimmed;
+        });
+
+        this.value = formattedSegments.join(',');
+        
+        // Attempt cursor position safety maintenance adjustment calculations
+        let diff = this.value.length - originalValue.length;
+        this.setSelectionRange(cursorPosition + diff, cursorPosition + diff);
+    });
 
     function toggleCorrectionMode() {
         const isCorrection = document.getElementById('correctionToggle').checked;
@@ -421,19 +542,19 @@
             panel.classList.add('correction-active');
             label.innerHTML = "⚠️ Correction Mode (Overwriting Data)";
             logBtn.innerText = "Fix";
-            inputField.placeholder = "Select prefix to replace value completely (Ex: 01-1000)...";
+            inputField.placeholder = "Select prefix to replace value completely...";
         } else {
             panel.classList.remove('correction-active');
             label.innerHTML = "📝 Normal Entry Mode (Adding Data)";
             logBtn.innerText = "Log";
-            inputField.placeholder = "Select number below or type calculation here (Ex: 01-1000)...";
+            inputField.placeholder = "Select number below or type here...";
         }
         inputField.focus();
     }
 
-    // Mathematical evaluation engine
+    // Mathematical evaluation engine safely parsing out decorative formatting commas
     function safeEvaluate(mathString) {
-        const cleanString = mathString.replace(/[^0-9+\-*/.]/g, '');
+        const cleanString = mathString.replace(/,/g, '').replace(/[^0-9+\-*/.]/g, '');
         if (!cleanString) return 0;
         try {
             return Function("\"use strict\"; return (" + cleanString + ")")();
@@ -454,6 +575,7 @@
 
         let segments = rawInput.split(',');
         let hasError = false;
+        let logsToAppend = [];
 
         segments.forEach(segment => {
             segment = segment.trim();
@@ -468,21 +590,23 @@
             let prefix = segment.substring(0, hyphenIndex).trim();
             let mathPart = segment.substring(hyphenIndex + 1).trim();
 
-            // Auto-corrects any inputs (0-9) to format cleanly with leading zeros (00-09)
-            if (!isNaN(prefix) && (prefix.length === 1 || parseInt(prefix, 10) < 10)) {
+            if (!isNaN(prefix.replace(/[^0-9]/g, '')) && prefix.length > 0) {
                 prefix = parseInt(prefix, 10).toString().padStart(2, '0');
             }
 
             if (ledgerData.hasOwnProperty(prefix)) {
                 let calculatedValue = safeEvaluate(mathPart);
                 if (calculatedValue !== null && !isNaN(calculatedValue)) {
-                    if (correctionToggle.checked) {
-                        // Replace value entirely instead of adding it
-                        ledgerData[prefix] = calculatedValue;
-                    } else {
-                        // Accumulate value normally
-                        ledgerData[prefix] += calculatedValue;
-                    }
+                    
+                    logsToAppend.push({
+                        id: Date.now() + Math.random().toString(36).substr(2, 5),
+                        timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'}),
+                        type: correctionToggle.checked ? 'FIX' : 'ADD',
+                        prefix: prefix,
+                        inputValue: mathPart,
+                        calculatedValue: calculatedValue
+                    });
+
                 } else {
                     hasError = true;
                 }
@@ -492,22 +616,57 @@
         });
 
         if (hasError) {
-            errorField.innerText = "Error: Input format invalid. Verify rules (Ex: 01-1000).";
-        } else {
-            // Turn off correction mode automatically after a successful adjustment to protect entries
-            if (correctionToggle.checked) {
-                correctionToggle.checked = false;
-                toggleCorrectionMode();
+            errorField.innerText = "Error: Input format invalid. Verify rules (Ex: 01-1,000).";
+            return;
+        }
+
+        // Commit processing pipeline state histories changes
+        logsToAppend.forEach(logItem => {
+            if (logItem.type === 'FIX') {
+                ledgerData[logItem.prefix] = logItem.calculatedValue;
+            } else {
+                ledgerData[logItem.prefix] += logItem.calculatedValue;
             }
+            entryHistory.unshift(logItem);
+        });
+
+        if (correctionToggle.checked) {
+            correctionToggle.checked = false;
+            toggleCorrectionMode();
         }
 
         localStorage.setItem('ledgerData', JSON.stringify(ledgerData));
+        localStorage.setItem('entryHistory', JSON.stringify(entryHistory));
+        
         renderGrid();
+        renderHistory();
+        
         inputField.value = "";
         inputField.focus();
     }
 
-    // Injects prefix into input instantly upon touch button tap selection
+    function deleteHistoryItem(idToKill) {
+        if (!confirm("Delete this individual entry record and reverse calculations?")) return;
+        
+        entryHistory = entryHistory.filter(item => item.id !== idToKill);
+        localStorage.setItem('entryHistory', JSON.stringify(entryHistory));
+
+        resetDataStructure();
+        
+        const reconstructionArray = [...entryHistory].reverse();
+        reconstructionArray.forEach(item => {
+            if (item.type === 'FIX') {
+                ledgerData[item.prefix] = item.calculatedValue;
+            } else {
+                ledgerData[item.prefix] += item.calculatedValue;
+            }
+        });
+
+        localStorage.setItem('ledgerData', JSON.stringify(ledgerData));
+        renderGrid();
+        renderHistory();
+    }
+
     function handlePadClick(numString) {
         const inputField = document.getElementById('entryInput');
         let currentVal = inputField.value.trim();
@@ -520,7 +679,6 @@
         inputField.focus();
     }
 
-    // Builds swipeable shortcut keys pad matrix layout
     function buildQuickPad() {
         const padContainer = document.getElementById('quickEntryPad');
         padContainer.innerHTML = "";
@@ -548,7 +706,6 @@
 
         for (let i = 0; i <= 99; i++) {
             let key = i.toString().padStart(2, '0');
-            let displayKey = key; 
             let value = ledgerData[key];
             
             runningGrandTotal += value;
@@ -559,21 +716,47 @@
             else if (i >= 78 && i <= 99) targetColIndex = 3;
 
             let tr = document.createElement('tr');
-            if (value > 0) {
-                tr.className = 'row-has-value';
-            }
+            if (value > 0) tr.className = 'row-has-value';
 
             let displayValue = (value === 0) ? "" : value.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
 
             tr.innerHTML = `
-                <td class="col-number">${displayKey}</td>
+                <td class="col-number">${key}</td>
                 <td class="col-amount">${displayValue}</td>
             `;
-            
             columns[targetColIndex].appendChild(tr);
         }
 
         document.getElementById('grandTotalDisplay').innerText = runningGrandTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    }
+
+    function renderHistory() {
+        const listContainer = document.getElementById('historyLogList');
+        const countBadge = document.getElementById('historyCount');
+        listContainer.innerHTML = "";
+        
+        countBadge.innerText = `${entryHistory.length} record${entryHistory.length === 1 ? '' : 's'}`;
+
+        if (entryHistory.length === 0) {
+            listContainer.innerHTML = `<div style="text-align:center;color:#94a3b8;font-size:0.8rem;padding-top:15px;">No transactions logged yet.</div>`;
+            return;
+        }
+
+        entryHistory.forEach(item => {
+            let div = document.createElement('div');
+            div.className = 'history-item';
+            
+            let badgeClass = item.type === 'ADD' ? 'badge-add' : 'badge-fix';
+            let formattedAmount = item.calculatedValue.toLocaleString(undefined, {minimumFractionDigits: 2});
+
+            div.innerHTML = `
+                <span class="history-meta">[${item.timestamp}]</span>
+                <span class="history-badge ${badgeClass}">${item.type}</span>
+                <span class="history-text">Number ${item.prefix} ➔ ${formattedAmount} <span style="font-size:0.7rem;color:#94a3b8;font-weight:normal;">(${item.inputValue})</span></span>
+                <button class="history-delete-btn" onclick="deleteHistoryItem('${item.id}')">❌</button>
+            `;
+            listContainer.appendChild(div);
+        });
     }
 
     function generateSnapshot() {
@@ -599,10 +782,13 @@
     }
 
     function clearAll() {
-        if (confirm("Reset all spreadsheet records back to zero?")) {
+        if (confirm("Reset everything? This will wipe the spreadsheet AND the entire history panel clean.")) {
             resetDataStructure();
+            entryHistory = [];
             localStorage.removeItem('ledgerData');
+            localStorage.removeItem('entryHistory');
             renderGrid();
+            renderHistory();
         }
     }
 
@@ -613,6 +799,7 @@
     // Run startup processes
     buildQuickPad();
     renderGrid();
+    renderHistory();
 </script>
 
 </body>
