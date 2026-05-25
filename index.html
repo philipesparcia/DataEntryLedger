@@ -3,206 +3,399 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Number Calculator & Ledger (00-99)</title>
+    <title>Professional Ledger Spreadsheet (00-99)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         :root {
-            --primary: #2563eb;
+            --primary: #1e3a8a;
+            --primary-light: #2563eb;
             --success: #16a34a;
             --danger: #dc2626;
-            --background: #f8fafc;
+            --warning: #ea580c;
+            --warning-light: #ffedd5;
+            --background: #f1f5f9;
             --surface: #ffffff;
-            --text: #1e293b;
-            --border: #e2e8f0;
+            --text: #0f172a;
+            --border: #cbd5e1;
+            --grid-line: #e2e8f0;
         }
 
         body {
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--background);
             color: var(--text);
             margin: 0;
-            padding: 15px;
+            padding: 10px;
             display: flex;
             flex-direction: column;
             align-items: center;
+            padding-bottom: 260px; /* Space so the sticky bottom panel doesn't block the tables */
         }
 
-        /* Container that wraps all elements to download beautifully as a picture */
+        /* -------------------------------------------------------------
+           SPREADSHEET CANVAS FRAME 
+        ------------------------------------------------------------- */
+        #capture-wrapper {
+            width: 100%;
+            max-width: 1100px;
+        }
+
         #capture-area {
             width: 100%;
-            max-width: 800px;
+            max-width: 1100px;
             background: var(--surface);
-            padding: 24px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            padding: 15px;
             box-sizing: border-box;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            border-radius: 4px;
         }
 
-        h1 {
-            margin-top: 0;
-            font-size: 1.5rem;
-            color: #0f172a;
-            border-bottom: 2px solid var(--border);
-            padding-bottom: 10px;
+        #capture-area.force-desktop-view {
+            width: 1050px !important;
+            padding: 30px !important;
         }
 
-        /* Grand Total Card Box */
+        /* Grand Total Header Box styling */
         .total-banner {
-            background: linear-gradient(135deg, #1e3a8a, #2563eb);
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
             color: white;
             padding: 20px;
-            border-radius: 8px;
+            border-radius: 6px;
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
             box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
         }
 
         .total-banner h2 {
             margin: 0;
-            font-size: 0.9rem;
+            font-size: 0.95rem;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 1.5px;
             opacity: 0.9;
         }
 
         .total-banner .grand-total-amount {
-            font-size: 2.25rem;
+            font-size: 2.6rem;
             font-weight: 800;
-            margin-top: 5px;
+            margin-top: 4px;
             display: block;
+            letter-spacing: 0.5px;
         }
+
+        /* Responsive grid framework: 2-columns split layout on mobile, 4-columns on widescreen view modes */
+        .spreadsheet-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            align-items: start;
+        }
+
+        #capture-area.force-desktop-view .spreadsheet-container {
+            grid-template-columns: repeat(4, 1fr) !important;
+        }
+
+        @media (min-width: 900px) {
+            .spreadsheet-container {
+                grid-template-columns: repeat(4, 1fr);
+            }
+            #capture-area {
+                padding: 30px;
+            }
+        }
+
+        .excel-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95rem;
+        }
+
+        .excel-table th {
+            border: 1px solid #172554;
+            padding: 10px 8px;
+            text-align: center;
+            background-color: var(--primary);
+            color: #ffffff;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+        }
+
+        .excel-table td {
+            border: 1px solid var(--grid-line);
+            padding: 6px 8px;
+            height: 22px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .col-number {
+            width: 40%;
+            text-align: center;
+            background-color: #f8fafc;
+            font-weight: 700;
+            color: #475569;
+            border-right: 1px solid var(--border) !important;
+        }
+
+        .col-amount {
+            width: 60%;
+            text-align: right;
+            padding-right: 12px !important;
+        }
+
+        /* Highlight entry row when active data exists */
+        .row-has-value {
+            background-color: #f0fdf4 !important; 
+        }
+        .row-has-value .col-amount {
+            font-weight: 700;
+            color: #16a34a;
+        }
+        .row-has-value .col-number {
+            background-color: #dcfce7;
+            color: #14532d;
+        }
+
+        /* -------------------------------------------------------------
+           STICKY BOTTOM INPUT CONTROL PANEL
+        ------------------------------------------------------------- */
+        .control-panel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--surface);
+            padding: 12px 15px 20px 15px;
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.12);
+            border-top: 3px solid var(--primary);
+            z-index: 9999;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: background-color 0.2s ease, border-top-color 0.2s ease;
+        }
+
+        /* Color shift when correction mode is active */
+        .control-panel.correction-active {
+            background-color: var(--warning-light);
+            border-top-color: var(--warning);
+        }
+
+        .panel-content {
+            width: 100%;
+            max-width: 1060px;
+        }
+
+        /* Correction Mode Toggle Bar styling */
+        .toggle-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f8fafc;
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            margin-bottom: 8px;
+        }
+        .control-panel.correction-active .toggle-row {
+            background: #fff7ed;
+            border-color: #fed7aa;
+        }
+
+        .toggle-label {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #334155;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Switch styling handles */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 46px;
+            height: 24px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #cbd5e1; transition: .2s; border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px;
+            background-color: white; transition: .2s; border-radius: 50%;
+        }
+        input:checked + .slider { background-color: var(--warning); }
+        input:checked + .slider:before { transform: translateX(22px); }
 
         .input-group {
             display: flex;
             gap: 10px;
-            margin-bottom: 15px;
+            margin-bottom: 8px;
         }
 
         input[type="text"] {
             flex: 1;
-            padding: 12px;
-            border: 1px solid var(--border);
+            padding: 12px 14px;
+            border: 2px solid var(--border);
             border-radius: 6px;
-            font-size: 1rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            width: 100%;
+            box-sizing: border-box;
+            background: #ffffff;
+        }
+        .control-panel.correction-active input[type="text"] {
+            border-color: #fdba74;
         }
 
         input[type="text"]:focus {
-            outline: 2px solid var(--primary);
-            border-color: transparent;
+            outline: none;
+            border-color: var(--primary-light);
+        }
+        .control-panel.correction-active input[type="text"]:focus {
+            border-color: var(--warning);
+        }
+
+        .quick-pad-title {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .quick-pad {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            padding: 4px 2px 8px 2px;
+            width: 100%;
+            white-space: nowrap;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .quick-pad::-webkit-scrollbar { height: 5px; }
+        .quick-pad::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+        .pad-btn {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            padding: 8px 15px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            border-radius: 6px;
+            cursor: pointer;
+            text-align: center;
+            user-select: none;
+            flex: 0 0 auto;
+            color: #334155;
+        }
+        .pad-btn:hover { background: #e0f2fe; border-color: var(--primary-light); color: var(--primary-light); }
+        .control-panel.correction-active .pad-btn:hover { background: #ffedd5; border-color: var(--warning); color: var(--warning); }
+
+        .action-row {
+            display: flex;
+            gap: 10px;
+            width: 100%;
         }
 
         .btn {
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: opacity 0.2s;
-            font-size: 0.95rem;
+            color: white; border: none; padding: 12px 15px; border-radius: 6px;
+            font-weight: 600; cursor: pointer; font-size: 0.95rem;
+            display: flex; align-items: center; justify-content: center;
         }
-
-        .btn:hover { opacity: 0.9; }
-        .btn-primary { background-color: var(--primary); }
-        .btn-success { background-color: var(--success); width: 100%; margin-bottom: 15px; font-size: 1.05rem; padding: 14px;}
-        .btn-danger { background-color: var(--danger); padding: 8px 16px; font-size: 0.85rem;}
+        .btn-primary { background-color: var(--primary); padding: 12px 25px; font-size: 1.05rem; }
+        .control-panel.correction-active .btn-primary { background-color: var(--warning); }
+        .btn-success { background-color: var(--success); flex: 2; font-size: 0.9rem; }
+        .btn-danger { background-color: var(--danger); flex: 1; font-size: 0.9rem; }
 
         .error-msg {
-            color: var(--danger);
-            font-size: 0.875rem;
-            margin-top: -10px;
-            margin-bottom: 15px;
-            min-height: 20px;
-        }
-
-        .controls {
-            display: flex;
-            justify-content: flex-end;
-            margin-bottom: 15px;
-        }
-
-        /* Mobile Responsive Grid Table Layout */
-        .grid-table {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-            gap: 10px;
-            border: 1px solid var(--border);
-            padding: 12px;
-            border-radius: 8px;
-            background: #f1f5f9;
-        }
-
-        .grid-item {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            padding: 10px;
-            border-radius: 6px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-variant-numeric: tabular-nums;
-        }
-
-        .grid-item .prefix {
-            font-weight: bold;
-            color: #64748b;
-        }
-
-        .grid-item .total {
-            font-weight: 600;
-            color: #0f172a;
-        }
-
-        /* Highlights slots with items calculated */
-        .grid-item.has-value {
-            background: #dbeafe;
-            border-color: #bfdbfe;
-        }
-        .grid-item.has-value .prefix {
-            color: #1e40af;
-        }
-
-        /* Flag used to instantly clean up operational UI during image generation export */
-        .no-export {
-            display: inherit;
+            color: var(--danger); font-size: 0.85rem; font-weight: bold;
+            margin-bottom: 4px; min-height: 15px;
         }
     </style>
 </head>
 <body>
 
-<div id="capture-area">
-    <h1>Data Entry Ledger (00 - 99)</h1>
-    
-    <div class="total-banner">
-        <h2>Grand Total Sum</h2>
-        <span class="grand-total-amount" id="grandTotalDisplay">0</span>
-    </div>
-    
-    <p class="no-export" style="color: #64748b; font-size: 0.875rem; margin-bottom: 8px;">
-        <strong>Tip:</strong> Paste multiple items at once using commas! <br>
-        <em>Example:</em> <code>01-1000+1000, 02-500, 03-300+150-50, 04-200</code>
-    </p>
-
-    <div class="input-group no-export">
-        <input type="text" id="entryInput" placeholder="Paste single or multiple strings here..." autofocus>
-        <button class="btn btn-primary" onclick="processInput()">Add</button>
-    </div>
-    <div id="errorMsg" class="error-msg no-export"></div>
-
-    <button class="btn btn-success no-export" onclick="generateSnapshot()">📸 Save Ledger as Picture</button>
-
-    <div class="controls no-export">
-        <button class="btn btn-danger" onclick="clearAll()">Reset All Data</button>
-    </div>
-
-    <div class="grid-table" id="ledgerGrid">
+<div id="capture-wrapper">
+    <div id="capture-area">
+        
+        <div class="total-banner">
+            <h2>Gross Report Statement Summary</h2>
+            <span class="grand-total-amount" id="grandTotalDisplay">0.00</span>
         </div>
+
+        <div class="spreadsheet-container">
+            
+            <table class="excel-table">
+                <thead>
+                    <tr><th colspan="2">Summary Column 1</th></tr>
+                </thead>
+                <tbody id="tbody-col-1"></tbody>
+            </table>
+
+            <table class="excel-table">
+                <thead>
+                    <tr><th colspan="2">Summary Column 2</th></tr>
+                </thead>
+                <tbody id="tbody-col-2"></tbody>
+            </table>
+
+            <table class="excel-table">
+                <thead>
+                    <tr><th colspan="2">Summary Column 3</th></tr>
+                </thead>
+                <tbody id="tbody-col-3"></tbody>
+            </table>
+
+            <table class="excel-table">
+                <thead>
+                    <tr><th colspan="2">Summary Column 4</th></tr>
+                </thead>
+                <tbody id="tbody-col-4"></tbody>
+            </table>
+
+        </div>
+    </div>
+</div>
+
+<div class="control-panel" id="controlPanel">
+    <div class="panel-content">
+        
+        <div id="errorMsg" class="error-msg"></div>
+
+        <div class="toggle-row">
+            <span class="toggle-label" id="toggleLabel">📝 Normal Entry Mode (Adding Data)</span>
+            <label class="switch">
+                <input type="checkbox" id="correctionToggle" onchange="toggleCorrectionMode()">
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <div class="input-group">
+            <input type="text" id="entryInput" placeholder="Select number below or type calculation here (Ex: 01-1000)..." autofocus>
+            <button class="btn btn-primary" id="logBtn" onclick="processInput()">Log</button>
+        </div>
+
+        <div class="quick-pad-title">⚡ Quick Select Number Prefix (Swipe Left/Right)</div>
+        <div class="quick-pad" id="quickEntryPad"></div>
+
+        <div class="action-row">
+            <button class="btn btn-success" onclick="generateSnapshot()">📸 Save Ledger as Picture</button>
+            <button class="btn btn-danger" onclick="clearAll()">Reset</button>
+        </div>
+        
+    </div>
 </div>
 
 <script>
     let ledgerData = {};
     
-    // Auto-load session work from cache if page was refreshed
     if (localStorage.getItem('ledgerData')) {
         ledgerData = JSON.parse(localStorage.getItem('ledgerData'));
     } else {
@@ -217,7 +410,28 @@
         }
     }
 
-    // Safely evaluates arithmetic expressions without breaking/crashing
+    function toggleCorrectionMode() {
+        const isCorrection = document.getElementById('correctionToggle').checked;
+        const panel = document.getElementById('controlPanel');
+        const label = document.getElementById('toggleLabel');
+        const logBtn = document.getElementById('logBtn');
+        const inputField = document.getElementById('entryInput');
+
+        if (isCorrection) {
+            panel.classList.add('correction-active');
+            label.innerHTML = "⚠️ Correction Mode (Overwriting Data)";
+            logBtn.innerText = "Fix";
+            inputField.placeholder = "Select prefix to replace value completely (Ex: 01-1000)...";
+        } else {
+            panel.classList.remove('correction-active');
+            label.innerHTML = "📝 Normal Entry Mode (Adding Data)";
+            logBtn.innerText = "Log";
+            inputField.placeholder = "Select number below or type calculation here (Ex: 01-1000)...";
+        }
+        inputField.focus();
+    }
+
+    // Mathematical evaluation engine
     function safeEvaluate(mathString) {
         const cleanString = mathString.replace(/[^0-9+\-*/.]/g, '');
         if (!cleanString) return 0;
@@ -228,16 +442,16 @@
         }
     }
 
-    // Mass processing core logic
+    // Primary parser core engine
     function processInput() {
         const inputField = document.getElementById('entryInput');
         const errorField = document.getElementById('errorMsg');
+        const correctionToggle = document.getElementById('correctionToggle');
         errorField.innerText = "";
 
         let rawInput = inputField.value.trim();
         if (!rawInput) return;
 
-        // Splits chunks by commas instantly
         let segments = rawInput.split(',');
         let hasError = false;
 
@@ -254,10 +468,21 @@
             let prefix = segment.substring(0, hyphenIndex).trim();
             let mathPart = segment.substring(hyphenIndex + 1).trim();
 
+            // Auto-corrects any inputs (0-9) to format cleanly with leading zeros (00-09)
+            if (!isNaN(prefix) && (prefix.length === 1 || parseInt(prefix, 10) < 10)) {
+                prefix = parseInt(prefix, 10).toString().padStart(2, '0');
+            }
+
             if (ledgerData.hasOwnProperty(prefix)) {
                 let calculatedValue = safeEvaluate(mathPart);
                 if (calculatedValue !== null && !isNaN(calculatedValue)) {
-                    ledgerData[prefix] += calculatedValue; // Stack value onto existing entry
+                    if (correctionToggle.checked) {
+                        // Replace value entirely instead of adding it
+                        ledgerData[prefix] = calculatedValue;
+                    } else {
+                        // Accumulate value normally
+                        ledgerData[prefix] += calculatedValue;
+                    }
                 } else {
                     hasError = true;
                 }
@@ -267,7 +492,13 @@
         });
 
         if (hasError) {
-            errorField.innerText = "Notice: Some inputs failed to process. Check formatting rules.";
+            errorField.innerText = "Error: Input format invalid. Verify rules (Ex: 01-1000).";
+        } else {
+            // Turn off correction mode automatically after a successful adjustment to protect entries
+            if (correctionToggle.checked) {
+                correctionToggle.checked = false;
+                toggleCorrectionMode();
+            }
         }
 
         localStorage.setItem('ledgerData', JSON.stringify(ledgerData));
@@ -276,79 +507,111 @@
         inputField.focus();
     }
 
-    // Refresh display view map
-    function renderGrid() {
-        const gridContainer = document.getElementById('ledgerGrid');
-        const grandTotalDisplay = document.getElementById('grandTotalDisplay');
-        gridContainer.innerHTML = "";
+    // Injects prefix into input instantly upon touch button tap selection
+    function handlePadClick(numString) {
+        const inputField = document.getElementById('entryInput');
+        let currentVal = inputField.value.trim();
         
+        if (currentVal === "" || currentVal.endsWith(',')) {
+            inputField.value = currentVal + numString + "-";
+        } else {
+            inputField.value = currentVal + ", " + numString + "-";
+        }
+        inputField.focus();
+    }
+
+    // Builds swipeable shortcut keys pad matrix layout
+    function buildQuickPad() {
+        const padContainer = document.getElementById('quickEntryPad');
+        padContainer.innerHTML = "";
+        
+        for (let i = 0; i <= 99; i++) {
+            let label = i.toString().padStart(2, '0');
+            let btn = document.createElement('div');
+            btn.className = 'pad-btn';
+            btn.innerText = label;
+            btn.onclick = function() { handlePadClick(label); };
+            padContainer.appendChild(btn);
+        }
+    }
+
+    function renderGrid() {
+        const columns = [
+            document.getElementById('tbody-col-1'),
+            document.getElementById('tbody-col-2'),
+            document.getElementById('tbody-col-3'),
+            document.getElementById('tbody-col-4')
+        ];
+
+        columns.forEach(col => col.innerHTML = "");
         let runningGrandTotal = 0;
 
         for (let i = 0; i <= 99; i++) {
             let key = i.toString().padStart(2, '0');
+            let displayKey = key; 
             let value = ledgerData[key];
             
             runningGrandTotal += value;
 
-            let itemDiv = document.createElement('div');
-            itemDiv.className = 'grid-item';
+            let targetColIndex = 0;
+            if (i >= 26 && i <= 51) targetColIndex = 1;
+            else if (i >= 52 && i <= 77) targetColIndex = 2;
+            else if (i >= 78 && i <= 99) targetColIndex = 3;
+
+            let tr = document.createElement('tr');
             if (value > 0) {
-                itemDiv.classList.add('has-value');
+                tr.className = 'row-has-value';
             }
 
-            itemDiv.innerHTML = `
-                <span class="prefix">${key}:</span>
-                <span class="total">${value.toLocaleString()}</span>
+            let displayValue = (value === 0) ? "" : value.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+            tr.innerHTML = `
+                <td class="col-number">${displayKey}</td>
+                <td class="col-amount">${displayValue}</td>
             `;
-            gridContainer.appendChild(itemDiv);
+            
+            columns[targetColIndex].appendChild(tr);
         }
 
-        // Output overall accumulated balance total
-        grandTotalDisplay.innerText = runningGrandTotal.toLocaleString();
+        document.getElementById('grandTotalDisplay').innerText = runningGrandTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
     }
 
-    // Snapshot canvas printer feature
     function generateSnapshot() {
-        const elementsToHide = document.querySelectorAll('.no-export');
-        
-        // Hide control elements temporarily so the picture doesn't look messy
-        elementsToHide.forEach(el => el.style.visibility = 'hidden');
-
         const captureArea = document.getElementById('capture-area');
+        captureArea.classList.add('force-desktop-view');
 
-        html2canvas(captureArea, {
-            backgroundColor: "#f8fafc",
-            scale: 2, // Double quality pixel density mapping for clear viewing
-            useCORS: true
-        }).then(canvas => {
-            // Restore control elements right after picture is taken
-            elementsToHide.forEach(el => el.style.visibility = 'visible');
-
-            // Trigger download prompt pipeline sequence
-            const link = document.createElement('a');
-            link.download = `Ledger_Total_Report_${new Date().toISOString().slice(0,10)}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-        }).catch(err => {
-            elementsToHide.forEach(el => el.style.visibility = 'visible');
-            alert("Error processing photo capture download. Use native device screenshot function if problem persists.");
-        });
+        setTimeout(() => {
+            html2canvas(captureArea, {
+                backgroundColor: "#ffffff",
+                scale: 2, 
+                logging: false
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `Gross_Ledger_Report_${new Date().toISOString().slice(0,10)}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                captureArea.classList.remove('force-desktop-view');
+            }).catch(err => {
+                alert("Error exporting image.");
+                captureArea.classList.remove('force-desktop-view');
+            });
+        }, 100);
     }
 
     function clearAll() {
-        if (confirm("Reset every single cell entry block down to 0? This cannot be undone.")) {
+        if (confirm("Reset all spreadsheet records back to zero?")) {
             resetDataStructure();
             localStorage.removeItem('ledgerData');
             renderGrid();
         }
     }
 
-    // Connects physical enter key directly to the process system
     document.getElementById('entryInput').addEventListener('keypress', function(e) {
         if (e.key === 'Enter') processInput();
     });
 
-    // Boot app display
+    // Run startup processes
+    buildQuickPad();
     renderGrid();
 </script>
 
