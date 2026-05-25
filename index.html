@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Number Calculator & Ledger (00-99)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --background: #f8fafc;
+            --surface: #ffffff;
+            --text: #1e293b;
+            --border: #e2e8f0;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--background);
+            color: var(--text);
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Container that wraps all elements to download beautifully as a picture */
+        #capture-area {
+            width: 100%;
+            max-width: 800px;
+            background: var(--surface);
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            box-sizing: border-box;
+        }
+
+        h1 {
+            margin-top: 0;
+            font-size: 1.5rem;
+            color: #0f172a;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 10px;
+        }
+
+        /* Grand Total Card Box */
+        .total-banner {
+            background: linear-gradient(135deg, #1e3a8a, #2563eb);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 20px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .total-banner h2 {
+            margin: 0;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.9;
+        }
+
+        .total-banner .grand-total-amount {
+            font-size: 2.25rem;
+            font-weight: 800;
+            margin-top: 5px;
+            display: block;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+
+        input[type="text"]:focus {
+            outline: 2px solid var(--primary);
+            border-color: transparent;
+        }
+
+        .btn {
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            font-size: 0.95rem;
+        }
+
+        .btn:hover { opacity: 0.9; }
+        .btn-primary { background-color: var(--primary); }
+        .btn-success { background-color: var(--success); width: 100%; margin-bottom: 15px; font-size: 1.05rem; padding: 14px;}
+        .btn-danger { background-color: var(--danger); padding: 8px 16px; font-size: 0.85rem;}
+
+        .error-msg {
+            color: var(--danger);
+            font-size: 0.875rem;
+            margin-top: -10px;
+            margin-bottom: 15px;
+            min-height: 20px;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 15px;
+        }
+
+        /* Mobile Responsive Grid Table Layout */
+        .grid-table {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 10px;
+            border: 1px solid var(--border);
+            padding: 12px;
+            border-radius: 8px;
+            background: #f1f5f9;
+        }
+
+        .grid-item {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 10px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .grid-item .prefix {
+            font-weight: bold;
+            color: #64748b;
+        }
+
+        .grid-item .total {
+            font-weight: 600;
+            color: #0f172a;
+        }
+
+        /* Highlights slots with items calculated */
+        .grid-item.has-value {
+            background: #dbeafe;
+            border-color: #bfdbfe;
+        }
+        .grid-item.has-value .prefix {
+            color: #1e40af;
+        }
+
+        /* Flag used to instantly clean up operational UI during image generation export */
+        .no-export {
+            display: inherit;
+        }
+    </style>
+</head>
+<body>
+
+<div id="capture-area">
+    <h1>Data Entry Ledger (00 - 99)</h1>
+    
+    <div class="total-banner">
+        <h2>Grand Total Sum</h2>
+        <span class="grand-total-amount" id="grandTotalDisplay">0</span>
+    </div>
+    
+    <p class="no-export" style="color: #64748b; font-size: 0.875rem; margin-bottom: 8px;">
+        <strong>Tip:</strong> Paste multiple items at once using commas! <br>
+        <em>Example:</em> <code>01-1000+1000, 02-500, 03-300+150-50, 04-200</code>
+    </p>
+
+    <div class="input-group no-export">
+        <input type="text" id="entryInput" placeholder="Paste single or multiple strings here..." autofocus>
+        <button class="btn btn-primary" onclick="processInput()">Add</button>
+    </div>
+    <div id="errorMsg" class="error-msg no-export"></div>
+
+    <button class="btn btn-success no-export" onclick="generateSnapshot()">📸 Save Ledger as Picture</button>
+
+    <div class="controls no-export">
+        <button class="btn btn-danger" onclick="clearAll()">Reset All Data</button>
+    </div>
+
+    <div class="grid-table" id="ledgerGrid">
+        </div>
+</div>
+
+<script>
+    let ledgerData = {};
+    
+    // Auto-load session work from cache if page was refreshed
+    if (localStorage.getItem('ledgerData')) {
+        ledgerData = JSON.parse(localStorage.getItem('ledgerData'));
+    } else {
+        resetDataStructure();
+    }
+
+    function resetDataStructure() {
+        ledgerData = {};
+        for (let i = 0; i <= 99; i++) {
+            let key = i.toString().padStart(2, '0');
+            ledgerData[key] = 0;
+        }
+    }
+
+    // Safely evaluates arithmetic expressions without breaking/crashing
+    function safeEvaluate(mathString) {
+        const cleanString = mathString.replace(/[^0-9+\-*/.]/g, '');
+        if (!cleanString) return 0;
+        try {
+            return Function("\"use strict\"; return (" + cleanString + ")")();
+        } catch (e) {
+            return null;
+        }
+    }
+
+    // Mass processing core logic
+    function processInput() {
+        const inputField = document.getElementById('entryInput');
+        const errorField = document.getElementById('errorMsg');
+        errorField.innerText = "";
+
+        let rawInput = inputField.value.trim();
+        if (!rawInput) return;
+
+        // Splits chunks by commas instantly
+        let segments = rawInput.split(',');
+        let hasError = false;
+
+        segments.forEach(segment => {
+            segment = segment.trim();
+            if (!segment) return;
+
+            let hyphenIndex = segment.indexOf('-');
+            if (hyphenIndex === -1) {
+                hasError = true;
+                return;
+            }
+
+            let prefix = segment.substring(0, hyphenIndex).trim();
+            let mathPart = segment.substring(hyphenIndex + 1).trim();
+
+            if (ledgerData.hasOwnProperty(prefix)) {
+                let calculatedValue = safeEvaluate(mathPart);
+                if (calculatedValue !== null && !isNaN(calculatedValue)) {
+                    ledgerData[prefix] += calculatedValue; // Stack value onto existing entry
+                } else {
+                    hasError = true;
+                }
+            } else {
+                hasError = true;
+            }
+        });
+
+        if (hasError) {
+            errorField.innerText = "Notice: Some inputs failed to process. Check formatting rules.";
+        }
+
+        localStorage.setItem('ledgerData', JSON.stringify(ledgerData));
+        renderGrid();
+        inputField.value = "";
+        inputField.focus();
+    }
+
+    // Refresh display view map
+    function renderGrid() {
+        const gridContainer = document.getElementById('ledgerGrid');
+        const grandTotalDisplay = document.getElementById('grandTotalDisplay');
+        gridContainer.innerHTML = "";
+        
+        let runningGrandTotal = 0;
+
+        for (let i = 0; i <= 99; i++) {
+            let key = i.toString().padStart(2, '0');
+            let value = ledgerData[key];
+            
+            runningGrandTotal += value;
+
+            let itemDiv = document.createElement('div');
+            itemDiv.className = 'grid-item';
+            if (value > 0) {
+                itemDiv.classList.add('has-value');
+            }
+
+            itemDiv.innerHTML = `
+                <span class="prefix">${key}:</span>
+                <span class="total">${value.toLocaleString()}</span>
+            `;
+            gridContainer.appendChild(itemDiv);
+        }
+
+        // Output overall accumulated balance total
+        grandTotalDisplay.innerText = runningGrandTotal.toLocaleString();
+    }
+
+    // Snapshot canvas printer feature
+    function generateSnapshot() {
+        const elementsToHide = document.querySelectorAll('.no-export');
+        
+        // Hide control elements temporarily so the picture doesn't look messy
+        elementsToHide.forEach(el => el.style.visibility = 'hidden');
+
+        const captureArea = document.getElementById('capture-area');
+
+        html2canvas(captureArea, {
+            backgroundColor: "#f8fafc",
+            scale: 2, // Double quality pixel density mapping for clear viewing
+            useCORS: true
+        }).then(canvas => {
+            // Restore control elements right after picture is taken
+            elementsToHide.forEach(el => el.style.visibility = 'visible');
+
+            // Trigger download prompt pipeline sequence
+            const link = document.createElement('a');
+            link.download = `Ledger_Total_Report_${new Date().toISOString().slice(0,10)}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }).catch(err => {
+            elementsToHide.forEach(el => el.style.visibility = 'visible');
+            alert("Error processing photo capture download. Use native device screenshot function if problem persists.");
+        });
+    }
+
+    function clearAll() {
+        if (confirm("Reset every single cell entry block down to 0? This cannot be undone.")) {
+            resetDataStructure();
+            localStorage.removeItem('ledgerData');
+            renderGrid();
+        }
+    }
+
+    // Connects physical enter key directly to the process system
+    document.getElementById('entryInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') processInput();
+    });
+
+    // Boot app display
+    renderGrid();
+</script>
+
+</body>
+</html>
