@@ -29,7 +29,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding-bottom: 380px; /* Space to accommodate history log safely */
+            padding-bottom: 380px; /* Increased space to accommodate history log safely */
         }
 
         /* -------------------------------------------------------------
@@ -405,14 +405,14 @@
                 <thead>
                     <tr><th colspan="2">Summary Column 3</th></tr>
                 </thead>
-                <tbody id="tbody-col-4"></tbody>
+                <tbody id="tbody-col-3"></tbody>
             </table>
 
             <table class="excel-table">
                 <thead>
                     <tr><th colspan="2">Summary Column 4</th></tr>
                 </thead>
-                <tbody id="tbody-col-3"></tbody>
+                <tbody id="tbody-col-4"></tbody>
             </table>
 
         </div>
@@ -433,7 +433,7 @@
         </div>
 
         <div class="input-group">
-            <input type="text" id="entryInput" placeholder="Select number below or type here..." autofocus autocomplete="off">
+            <input type="text" id="entryInput" placeholder="Select number below or type calculation here (Ex: 01-1000)..." autofocus>
             <button class="btn btn-primary" id="logBtn" onclick="processInput()">Log</button>
         </div>
 
@@ -479,58 +479,6 @@
         }
     }
 
-    // Dynamic Live Field Masking Formatting Logic
-    const inputField = document.getElementById('entryInput');
-    inputField.addEventListener('input', function(e) {
-        let cursorPosition = this.selectionStart;
-        let originalValue = this.value;
-        
-        // Split input into segments if user types multi-entries with commas
-        let segments = originalValue.split(',');
-        
-        let formattedSegments = segments.map((segment, index) => {
-            // Trim leading spaces from subsequent sub-segments
-            let trimmed = segment;
-            let initialSpaces = "";
-            if (index > 0) {
-                let matches = segment.match(/^(\s*)/);
-                initialSpaces = matches ? matches[1] : "";
-                trimmed = segment.trimStart();
-            }
-
-            // Step 1: Handle formatting for single-digit or double-digit prefix additions
-            if (/^\d{2}$/.test(trimmed)) {
-                return initialSpaces + trimmed + "-";
-            }
-            if (/^\d{1}$/.test(trimmed) && index === segments.length - 1 && e.inputType !== 'deleteContentBackward') {
-                // If it's a single digit and we are typing, wait for next digit or auto-add later on blur
-            }
-
-            // Step 2: Handle comma injector separators for values after a hyphen
-            if (trimmed.includes('-')) {
-                let parts = trimmed.split('-');
-                let prefix = parts[0];
-                let mathVal = parts.slice(1).join('-'); // Re-join if multiple hyphens exist
-                
-                // Clean numeric values only from comma positions to recalculate masks
-                let cleanMath = mathVal.replace(/,/g, '');
-                
-                // Format numeric groups with commas
-                let formattedMath = cleanMath.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-                
-                return initialSpaces + prefix + "-" + formattedMath;
-            }
-            
-            return initialSpaces + trimmed;
-        });
-
-        this.value = formattedSegments.join(',');
-        
-        // Attempt cursor position safety maintenance adjustment calculations
-        let diff = this.value.length - originalValue.length;
-        this.setSelectionRange(cursorPosition + diff, cursorPosition + diff);
-    });
-
     function toggleCorrectionMode() {
         const isCorrection = document.getElementById('correctionToggle').checked;
         const panel = document.getElementById('controlPanel');
@@ -542,19 +490,19 @@
             panel.classList.add('correction-active');
             label.innerHTML = "⚠️ Correction Mode (Overwriting Data)";
             logBtn.innerText = "Fix";
-            inputField.placeholder = "Select prefix to replace value completely...";
+            inputField.placeholder = "Select prefix to replace value completely (Ex: 01-1000)...";
         } else {
             panel.classList.remove('correction-active');
             label.innerHTML = "📝 Normal Entry Mode (Adding Data)";
             logBtn.innerText = "Log";
-            inputField.placeholder = "Select number below or type here...";
+            inputField.placeholder = "Select number below or type calculation here (Ex: 01-1000)...";
         }
         inputField.focus();
     }
 
-    // Mathematical evaluation engine safely parsing out decorative formatting commas
+    // Mathematical evaluation engine
     function safeEvaluate(mathString) {
-        const cleanString = mathString.replace(/,/g, '').replace(/[^0-9+\-*/.]/g, '');
+        const cleanString = mathString.replace(/[^0-9+\-*/.]/g, '');
         if (!cleanString) return 0;
         try {
             return Function("\"use strict\"; return (" + cleanString + ")")();
@@ -590,7 +538,7 @@
             let prefix = segment.substring(0, hyphenIndex).trim();
             let mathPart = segment.substring(hyphenIndex + 1).trim();
 
-            if (!isNaN(prefix.replace(/[^0-9]/g, '')) && prefix.length > 0) {
+            if (!isNaN(prefix) && (prefix.length === 1 || parseInt(prefix, 10) < 10)) {
                 prefix = parseInt(prefix, 10).toString().padStart(2, '0');
             }
 
@@ -598,6 +546,7 @@
                 let calculatedValue = safeEvaluate(mathPart);
                 if (calculatedValue !== null && !isNaN(calculatedValue)) {
                     
+                    // Archive info package for real-time history logging structures
                     logsToAppend.push({
                         id: Date.now() + Math.random().toString(36).substr(2, 5),
                         timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'}),
@@ -616,7 +565,7 @@
         });
 
         if (hasError) {
-            errorField.innerText = "Error: Input format invalid. Verify rules (Ex: 01-1,000).";
+            errorField.innerText = "Error: Input format invalid. Verify rules (Ex: 01-1000).";
             return;
         }
 
@@ -627,7 +576,7 @@
             } else {
                 ledgerData[logItem.prefix] += logItem.calculatedValue;
             }
-            entryHistory.unshift(logItem);
+            entryHistory.unshift(logItem); // Insert into the front of history array elements
         });
 
         if (correctionToggle.checked) {
@@ -645,14 +594,18 @@
         inputField.focus();
     }
 
+    // Safely removes a targeted singular row history node and recalculates running database sums
     function deleteHistoryItem(idToKill) {
         if (!confirm("Delete this individual entry record and reverse calculations?")) return;
         
+        // Find targeted item index location parameters
         entryHistory = entryHistory.filter(item => item.id !== idToKill);
         localStorage.setItem('entryHistory', JSON.stringify(entryHistory));
 
+        // Re-execute chronological pipeline build algorithms out from zero balances base states
         resetDataStructure();
         
+        // Recompute in reverse chronological array order path flows
         const reconstructionArray = [...entryHistory].reverse();
         reconstructionArray.forEach(item => {
             if (item.type === 'FIX') {
